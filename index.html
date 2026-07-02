@@ -291,6 +291,11 @@
   .hidden{display:none !important;}
   .foot{text-align:center; color:var(--ink-soft); font-size:12.5px; margin-top:18px;}
   .foot a{color:#8a7bff;}
+  .reset-link{
+    background:none; border:none; color:var(--ink-soft); font-size:12px; font-family:'Nunito';
+    text-decoration:underline; cursor:pointer; opacity:.65; margin-top:10px;
+  }
+  .reset-link:hover{opacity:1;}
   @media (max-width:520px){
     .big-title{font-size:32px;}
     .hud{flex-wrap:wrap;}
@@ -352,6 +357,7 @@
 
     <div id="bestLine" class="best"></div>
     <button class="icon-btn" id="soundBtnW" onclick="toggleSound()" title="Sound on/off" style="margin:0 auto">🔊</button>
+    <div><button class="reset-link" onclick="resetProgress()">Erase my progress on this device</button></div>
     <div class="foot">Waddle on! Puzzles inspired by Smullyan-style logic &amp; <a href="https://puzzlewocky.com/brain-teasers/knights-and-knaves/" target="_blank" rel="noopener">puzzlewocky.com</a></div>
   </section>
 
@@ -1113,6 +1119,13 @@ function refreshBest(){
   if(best>0) parts.push(`📖 Best quest: ${best}`);
   if(bestE>0) parts.push(`♾️ Best endless: ${bestE} (${bestR} rounds)`);
   $('bestLine').textContent=parts.join('  ·  ');
+}
+
+function resetProgress(){
+  if(!confirm('Erase all saved scores and badges on this device?')) return;
+  ['kk_best','kk_best_endless','kk_best_round','kk_badges'].forEach(k=>{ try{ localStorage.removeItem(k); }catch(e){} });
+  refreshBest(); renderBadges();
+  showToast('🧹 Fresh snow! Progress erased.');
 }
 
 /* ---------- penguin pal ---------- */
