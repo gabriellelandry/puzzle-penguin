@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Puzzle Penguin — a Waddling Logic Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#e2f1ff; --bg2:#efe9ff; --bg3:#eafbf0;
+    --card:#ffffff;
+    --ink:#3a3550; --ink-soft:#6b6480; --line:#efe9f5;
+    --ruby:#ff7b86; --ruby-soft:#fff0f1;
+    --sky:#6aa9ff; --sky-soft:#eef4ff;
+    --fern:#46c794; --fern-soft:#e9faf2;
+    --gold:#ffce4a; --gold-deep:#f0a93a; --gold-soft:#fff6da;
+    --lilac:#b69bff; --lilac-soft:#f3eeff;
+    --moss:#8bc751; --moss-soft:#f0f9e6;
+    --good:#39c07a; --good-soft:#e7faf0;
+    --bad:#ff6b7d; --bad-soft:#fff0f2;
+    --shadow:0 18px 40px -18px rgba(90,70,120,.45);
+    --shadow-sm:0 8px 18px -10px rgba(90,70,120,.45);
+    --r:22px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:'Nunito',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(120% 90% at 12% 0%, var(--bg1), transparent 55%),
+      radial-gradient(120% 90% at 95% 8%, var(--bg2), transparent 55%),
+      radial-gradient(140% 100% at 50% 110%, var(--bg3), transparent 60%),
+      #f6faff;
+    min-height:100%;
+    display:flex; align-items:flex-start; justify-content:center;
+    padding:26px 16px 60px;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,h4,.brand,.btn,.role-name,.score-num{font-family:'Baloo 2',cursive,system-ui;}
+  .wrap{width:100%; max-width:680px; position:relative; z-index:2;}
+
+  /* ---- floating background dreamscape ---- */
+  .blob{position:fixed; border-radius:50%; filter:blur(2px); opacity:.55; z-index:0; pointer-events:none;
+    animation:drift 16s ease-in-out infinite;}
+  .blob.b1{width:180px;height:180px;background:radial-gradient(circle at 35% 35%,#d9edff,#c0ddff);top:8%;left:-60px;}
+  .blob.b2{width:130px;height:130px;background:radial-gradient(circle at 35% 35%,#e8ddff,#d6c6ff);top:55%;right:-40px;animation-delay:-5s;animation-duration:20s;}
+  .blob.b3{width:90px;height:90px;background:radial-gradient(circle at 35% 35%,#d9f7e6,#c1efd6);bottom:6%;left:8%;animation-delay:-9s;animation-duration:23s;}
+  .blob.b4{width:70px;height:70px;background:radial-gradient(circle at 35% 35%,#fff0c2,#ffe49a);top:20%;right:12%;animation-delay:-13s;animation-duration:18s;}
+  @keyframes drift{
+    0%,100%{transform:translate(0,0) scale(1);}
+    33%{transform:translate(24px,-30px) scale(1.06);}
+    66%{transform:translate(-18px,22px) scale(.96);}
+  }
+  .spark{position:fixed; z-index:0; pointer-events:none; font-size:14px; color:#e7c8ff;
+    animation:twinkle 3.6s ease-in-out infinite;}
+  @keyframes twinkle{0%,100%{opacity:.15;transform:scale(.7) rotate(0deg);}50%{opacity:.85;transform:scale(1.15) rotate(25deg);}}
+  .snow{position:fixed; top:-6vh; z-index:1; pointer-events:none; color:#c8e2ff; user-select:none;
+    animation:snowfall linear infinite;}
+  @keyframes snowfall{
+    0%{transform:translateY(0) translateX(0) rotate(0deg); opacity:0;}
+    8%{opacity:.85;}
+    92%{opacity:.85;}
+    100%{transform:translateY(112vh) translateX(34px) rotate(200deg); opacity:0;}
+  }
+
+  /* ---- penguin pal ---- */
+  #pal{position:fixed; left:18px; bottom:14px; z-index:30; display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none;}
+  .pal-bubble{
+    background:#fff; border:2px solid var(--line); border-radius:14px; padding:7px 11px;
+    font-size:13.5px; font-weight:700; color:var(--ink-soft); box-shadow:var(--shadow-sm);
+    opacity:0; transform:translateY(8px) scale(.85); transition:.25s cubic-bezier(.2,1.3,.4,1);
+    max-width:180px; text-align:center;
+  }
+  .pal-bubble.show{opacity:1; transform:none;}
+  #palBird{font-size:46px; line-height:1; animation:waddle 2.6s ease-in-out infinite;
+    filter:drop-shadow(0 6px 8px rgba(90,70,120,.25));}
+  @keyframes waddle{0%,100%{transform:rotate(-6deg) translateX(-2px);}50%{transform:rotate(6deg) translateX(2px);}}
+  #palBird.hop{animation:palHop .6s cubic-bezier(.2,1.4,.4,1);}
+  @keyframes palHop{0%{transform:translateY(0);}40%{transform:translateY(-18px) rotate(-10deg) scale(1.1);}100%{transform:translateY(0);}}
+  @media (max-width:940px){#pal{display:none;}}
+
+  /* ---- top score bar ---- */
+  .hud{
+    display:flex; align-items:center; gap:12px;
+    background:var(--card); border-radius:18px; padding:10px 14px;
+    box-shadow:var(--shadow-sm); margin-bottom:16px;
+    border:2px solid #fff;
+  }
+  .hud .stat{display:flex; flex-direction:column; line-height:1; gap:3px; min-width:0;}
+  .hud .stat .k{font-size:11px; letter-spacing:.04em; color:var(--ink-soft); text-transform:uppercase; font-weight:800;}
+  .hud .stat .v{font-family:'Baloo 2'; font-size:20px; font-weight:800;}
+  .hud .spacer{flex:1;}
+  .hearts{font-size:17px; letter-spacing:2px;}
+  .hearts .lost{filter:grayscale(1); opacity:.4;}
+  .streak-chip{
+    display:none; align-items:center; gap:4px; font-family:'Baloo 2'; font-weight:800; font-size:16px;
+    background:#fff3e2; border:2px solid #ffc06e; color:#c76b12; border-radius:999px; padding:4px 12px;
+  }
+  .streak-chip.show{display:flex; animation:pop .35s cubic-bezier(.2,1.6,.4,1);}
+  .streak-chip.hot{animation:flamePulse 1s ease-in-out infinite;}
+  @keyframes flamePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,160,60,.35);}50%{transform:scale(1.06);box-shadow:0 0 0 7px rgba(255,160,60,0);}}
+  @keyframes pop{0%{transform:scale(.4);}100%{transform:scale(1);}}
+  .icon-btn{
+    border:2px solid var(--line); background:#fff; border-radius:12px; width:38px;height:38px;
+    font-size:17px; cursor:pointer; transition:.15s; display:grid; place-items:center; padding:0; flex:none;
+  }
+  .icon-btn:hover{transform:translateY(-1px) rotate(-4deg); border-color:#d8cdea;}
+  .progress-dots{display:flex; gap:6px; flex-wrap:wrap;}
+  .dot{width:10px;height:10px;border-radius:50%;background:#e7e0f0; transition:.25s;}
+  .dot.done{background:var(--good);}
+  .dot.cur{background:var(--gold); box-shadow:0 0 0 4px #fff3cf; animation:dotPulse 1.6s ease-in-out infinite;}
+  @keyframes dotPulse{50%{transform:scale(1.25);}}
+
+  /* ---- cards ---- */
+  .card{
+    background:var(--card); border-radius:var(--r); box-shadow:var(--shadow);
+    padding:26px 24px; border:2px solid #fff; position:relative; overflow:hidden;
+  }
+  .card::before{content:""; position:absolute; inset:0 0 auto 0; height:7px;
+    background:linear-gradient(90deg,var(--sky),#7adcc7,var(--lilac),#ff9ecb);}
+  .card-enter{animation:cardIn .5s cubic-bezier(.2,1.2,.4,1);}
+  @keyframes cardIn{0%{opacity:0; transform:translateY(26px) scale(.97);}100%{opacity:1; transform:none;}}
+
+  .timebar{position:absolute; top:7px; left:0; right:0; height:5px; background:#f1ecf8;}
+  .timebar-fill{height:100%; width:100%; background:linear-gradient(90deg,#46d68c,#39c07a); transition:width .3s linear, background .5s;}
+  .timebar-fill.mid{background:linear-gradient(90deg,#ffce4a,#f0a93a);}
+  .timebar-fill.low{background:linear-gradient(90deg,#ff8d9b,#ff6b7d);}
+
+  .eyebrow{font-weight:800; color:var(--ink-soft); letter-spacing:.06em; text-transform:uppercase; font-size:12.5px;}
+  .ptitle{font-size:26px; margin:2px 0 4px; font-weight:800;}
+  .scene{color:var(--ink-soft); font-size:15.5px; margin:0 0 18px; line-height:1.5;}
+
+  /* ---- character ---- */
+  .chars{display:flex; flex-direction:column; gap:14px;}
+  .char{
+    display:flex; gap:14px; align-items:flex-start;
+    background:#fbfaff; border:2px solid var(--line); border-radius:18px; padding:14px;
+    transition:border-color .18s, background .18s;
+    animation:charIn .45s cubic-bezier(.2,1.2,.4,1) both;
+  }
+  @keyframes charIn{0%{opacity:0; transform:translateX(-18px);}100%{opacity:1; transform:none;}}
+  .char.ok{border-color:var(--good); background:var(--good-soft);}
+  .char.no{border-color:var(--bad); background:var(--bad-soft); animation:shake .4s;}
+  .char.locked{opacity:.92;}
+  @keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}
+    30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+  .avatar{
+    width:54px;height:54px;border-radius:16px;flex:none;
+    display:grid;place-items:center;font-size:30px;
+    box-shadow:var(--shadow-sm);
+    animation:bob 3.4s ease-in-out infinite;
+  }
+  .char:nth-child(2) .avatar{animation-delay:-1.1s;}
+  .char:nth-child(3) .avatar{animation-delay:-2.2s;}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-1.5deg);}50%{transform:translateY(-5px) rotate(1.5deg);}}
+  .char:hover .avatar{animation:wiggle .5s ease-in-out;}
+  @keyframes wiggle{0%,100%{transform:rotate(0);}25%{transform:rotate(-8deg) scale(1.08);}75%{transform:rotate(8deg) scale(1.08);}}
+  .char.ok .avatar{animation:hooray .6s cubic-bezier(.2,1.4,.4,1);}
+  @keyframes hooray{0%{transform:translateY(0);}40%{transform:translateY(-14px) rotate(-8deg) scale(1.12);}70%{transform:translateY(2px) rotate(4deg);}100%{transform:translateY(0);}}
+  .a-ruby{background:var(--ruby-soft); border:2px solid var(--ruby);}
+  .a-sky{background:var(--sky-soft); border:2px solid var(--sky);}
+  .a-fern{background:var(--fern-soft); border:2px solid var(--fern);}
+  .a-gold{background:var(--gold-soft); border:2px solid var(--gold-deep);}
+  .a-lilac{background:var(--lilac-soft); border:2px solid var(--lilac);}
+  .a-moss{background:var(--moss-soft); border:2px solid var(--moss);}
+  .char .body{flex:1; min-width:0;}
+  .char .name{font-family:'Baloo 2'; font-weight:800; font-size:17px; display:flex; align-items:center; gap:7px;}
+  .verdict{margin-left:auto; font-size:20px;}
+  .bubble{
+    position:relative; background:#fff; border:2px solid var(--line);
+    border-radius:14px; padding:9px 12px; margin:7px 0 11px; font-size:15.5px; line-height:1.4;
+    animation:bubbleIn .4s cubic-bezier(.2,1.5,.4,1) both;
+    transform-origin:16px -6px;
+  }
+  @keyframes bubbleIn{0%{opacity:0; transform:scale(.5);}100%{opacity:1; transform:scale(1);}}
+  .bubble::before{content:""; position:absolute; left:16px; top:-9px; width:14px;height:14px;
+    background:#fff; border-left:2px solid var(--line); border-top:2px solid var(--line);
+    transform:rotate(45deg);}
+  .bubble b{font-weight:800;}
+
+  .roles{display:flex; gap:8px; flex-wrap:wrap;}
+  .role{
+    border:2px solid var(--line); background:#fff; color:var(--ink-soft);
+    border-radius:12px; padding:7px 12px; font-weight:800; font-size:14px;
+    cursor:pointer; transition:.15s; display:flex; align-items:center; gap:6px;
+    font-family:'Nunito';
+  }
+  .role:hover{transform:translateY(-2px) scale(1.03);}
+  .role:active{transform:translateY(0) scale(.97);}
+  .role.sel{animation:selPop .25s cubic-bezier(.2,1.6,.4,1);}
+  @keyframes selPop{0%{transform:scale(.85);}100%{transform:scale(1);}}
+  .role.sel.knight{border-color:var(--sky); background:var(--sky-soft); color:#2c63b8;}
+  .role.sel.knave{border-color:var(--ruby); background:var(--ruby-soft); color:#c23c4a;}
+  .role.sel.spy{border-color:var(--gold-deep); background:#fff6da; color:#a9740f;}
+  .role:disabled{cursor:default; opacity:.75; transform:none;}
+
+  /* ---- actions ---- */
+  .actions{display:flex; gap:10px; margin-top:20px; align-items:center; flex-wrap:wrap;}
+  .btn{
+    border:none; border-radius:14px; padding:13px 22px; font-size:16px; font-weight:800;
+    cursor:pointer; transition:.15s; box-shadow:var(--shadow-sm); font-family:'Baloo 2';
+    border-bottom:4px solid rgba(0,0,0,.16);
+  }
+  .btn:active{transform:translateY(2px); border-bottom-width:2px;}
+  .btn-primary{background:linear-gradient(180deg,#8a7bff,#6f5cf0); color:#fff;}
+  .btn-primary:disabled{opacity:.45; cursor:not-allowed; box-shadow:none;}
+  .btn-good{background:linear-gradient(180deg,#46d68c,#2fbf76); color:#fff;}
+  .btn-ghost{background:#fff; color:var(--ink-soft); border:2px solid var(--line); border-bottom-width:4px; box-shadow:none;}
+  .btn-gold{background:linear-gradient(180deg,var(--gold),var(--gold-deep)); color:#704c00;}
+  .btn-gold:disabled{opacity:.5; cursor:not-allowed;}
+  .hint-box{
+    margin-top:14px; background:#fff9e6; border:2px dashed var(--gold-deep);
+    border-radius:14px; padding:12px 14px; font-size:15px; color:#8a6312; display:none;
+  }
+  .hint-box.show{display:block; animation:cardIn .35s cubic-bezier(.2,1.2,.4,1);}
+  .feedback{margin-left:auto; font-family:'Baloo 2'; font-weight:800; font-size:16px;}
+  .feedback.good{color:var(--good);}
+  .feedback.bad{color:var(--bad);}
+
+  .explain{
+    margin-top:16px; background:#f4f9ff; border:2px solid #d8e6ff; border-radius:14px;
+    padding:13px 15px; display:none;
+  }
+  .explain.show{display:block; animation:cardIn .4s cubic-bezier(.2,1.2,.4,1);}
+  .explain h4{margin:0 0 8px; font-size:15.5px; color:#3a6fbf;}
+  .explain .xline{font-size:14.5px; margin:5px 0; line-height:1.45; color:#4a5a78;}
+
+  /* ---- welcome / end ---- */
+  .center{text-align:center;}
+  .logo{font-size:64px; line-height:1; margin-bottom:6px; animation:bob 3.4s ease-in-out infinite; display:inline-block;}
+  .big-title{font-size:40px; font-weight:800; margin:0 0 6px; letter-spacing:-.01em;}
+  .grad{
+    background:linear-gradient(90deg,#5ab6ff,#7adcc7,#b69bff,#ff9ecb,#5ab6ff);
+    background-size:300% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:shimmer 7s linear infinite;
+  }
+  @keyframes shimmer{to{background-position:300% 0;}}
+  .sub{color:var(--ink-soft); font-size:17px; margin:0 auto 22px; max-width:460px; line-height:1.55;}
+
+  .modes{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:0 0 20px;}
+  .mode-card{
+    flex:1; min-width:200px; max-width:260px; text-align:left; cursor:pointer;
+    background:#faf8ff; border:2px solid var(--line); border-radius:18px; padding:16px 18px;
+    transition:.18s; font-family:'Nunito'; color:var(--ink);
+  }
+  .mode-card:hover{transform:translateY(-3px); box-shadow:var(--shadow-sm); border-color:#d9cdf2;}
+  .mode-card .m-ico{font-size:34px; line-height:1;}
+  .mode-card .m-name{font-family:'Baloo 2'; font-weight:800; font-size:19px; margin:6px 0 3px;}
+  .mode-card .m-desc{font-size:13.5px; color:var(--ink-soft); line-height:1.45;}
+  .mode-card.quest .m-name{color:#6f5cf0;}
+  .mode-card.endless .m-name{color:#d98a12;}
+
+  .rules{
+    text-align:left; background:#faf8ff; border:2px solid var(--line); border-radius:18px;
+    padding:18px 20px; margin:0 auto 20px; max-width:480px;
+  }
+  .rules h3{margin:0 0 12px; font-size:18px;}
+  .rule{display:flex; gap:12px; align-items:center; margin:10px 0; font-size:15.5px;}
+  .rule .chip{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:22px;flex:none;}
+
+  .badge-row{display:flex; gap:9px; justify-content:center; flex-wrap:wrap; margin:0 auto 18px; max-width:460px;}
+  .badge{
+    width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:23px;
+    background:#fff6da;border:2px solid var(--gold-deep); cursor:help; transition:.15s;
+  }
+  .badge:hover{transform:translateY(-2px) scale(1.08);}
+  .badge.off{background:#f3f0f8;border-color:#e2dcee;filter:grayscale(1);opacity:.45;}
+  .badge-label{font-size:12px;color:var(--ink-soft);font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+
+  .stat-grid{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:8px 0 22px;}
+  .stat-card{background:#faf8ff; border:2px solid var(--line); border-radius:16px; padding:14px 20px; min-width:120px;}
+  .stat-card .k{font-size:12px; color:var(--ink-soft); font-weight:800; text-transform:uppercase; letter-spacing:.04em;}
+  .stat-card .v{font-family:'Baloo 2'; font-size:30px; font-weight:800;}
+  .rank{font-family:'Baloo 2'; font-size:24px; font-weight:800; margin:4px 0 2px;}
+  .best{color:var(--ink-soft); font-size:14px; margin-bottom:18px;}
+
+  .toast{
+    position:fixed; left:50%; top:24px; transform:translateX(-50%) translateY(-120%);
+    background:#fff; border:2px solid var(--good); color:var(--good);
+    font-family:'Baloo 2'; font-weight:800; font-size:17px;
+    padding:12px 22px; border-radius:999px; box-shadow:var(--shadow);
+    transition:transform .35s cubic-bezier(.2,1.3,.4,1); z-index:50;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .toast.gold{border-color:var(--gold-deep); color:#a9740f;}
+  canvas#cf{position:fixed; inset:0; pointer-events:none; z-index:40;}
+  .hidden{display:none !important;}
+  .foot{text-align:center; color:var(--ink-soft); font-size:12.5px; margin-top:18px;}
+  .foot a{color:#8a7bff;}
+  @media (max-width:520px){
+    .big-title{font-size:32px;}
+    .hud{flex-wrap:wrap;}
+  }
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
+<span class="spark" style="top:14%;left:16%">✦</span>
+<span class="spark" style="top:30%;right:9%;animation-delay:-1.2s">✧</span>
+<span class="spark" style="top:64%;left:6%;animation-delay:-2.1s">✦</span>
+<span class="spark" style="bottom:12%;right:18%;animation-delay:-2.9s">✧</span>
+<span class="spark" style="top:8%;right:30%;animation-delay:-1.7s">✦</span>
+<span class="snow" style="left:6%;font-size:15px;animation-duration:13s;animation-delay:-2s">❄</span>
+<span class="snow" style="left:18%;font-size:11px;animation-duration:17s;animation-delay:-9s">❅</span>
+<span class="snow" style="left:33%;font-size:14px;animation-duration:15s;animation-delay:-5s">❄</span>
+<span class="snow" style="left:47%;font-size:10px;animation-duration:19s;animation-delay:-12s">❆</span>
+<span class="snow" style="left:61%;font-size:13px;animation-duration:14s;animation-delay:-7s">❅</span>
+<span class="snow" style="left:74%;font-size:16px;animation-duration:12s;animation-delay:-3s">❄</span>
+<span class="snow" style="left:86%;font-size:11px;animation-duration:18s;animation-delay:-11s">❆</span>
+<span class="snow" style="left:94%;font-size:13px;animation-duration:16s;animation-delay:-6s">❅</span>
+
+<div id="pal">
+  <div class="pal-bubble" id="palBubble"></div>
+  <div id="palBird">🐧</div>
+</div>
+
+<div class="wrap">
+
+  <!-- WELCOME -->
+  <section id="welcome" class="card center card-enter">
+    <div class="logo">🐧</div>
+    <h1 class="big-title grad">Puzzle Penguin</h1>
+    <p class="sub">Waddle in! You're the <b>Puzzle Penguin</b>, flippering across a frosty isle where <b>Knights always tell the truth</b> and <b>Knaves always lie</b>. Puzzle your way through — the cleaner your deductions, the more fish… er, points you earn.</p>
+
+    <div class="modes">
+      <button class="mode-card quest" onclick="startQuest()">
+        <div class="m-ico">📖</div>
+        <div class="m-name">Story Quest</div>
+        <div class="m-desc">10 handcrafted puzzles across 3 chapters — waddle from Snowdrop Shore to Spy's Floe.</div>
+      </button>
+      <button class="mode-card endless" onclick="startEndless()">
+        <div class="m-ico">♾️</div>
+        <div class="m-name">Endless Floe</div>
+        <div class="m-desc">Freshly-chilled puzzles forever. 3 hearts, rising difficulty, chase your streak!</div>
+      </button>
+    </div>
+
+    <div class="rules">
+      <h3>How to play</h3>
+      <div class="rule"><span class="chip a-sky">🛡️</span><div><b>Knights</b> only ever say <b>true</b> things.</div></div>
+      <div class="rule"><span class="chip a-ruby">🎭</span><div><b>Knaves</b> only ever say <b>false</b> things.</div></div>
+      <div class="rule"><span class="chip a-gold">🕵️</span><div>A <b>Spy</b> (later rounds) can do <b>either</b> — truth or lie.</div></div>
+      <div class="rule"><span class="chip" style="background:#eef0ff">🐧</span><div>You're the <b>Puzzle Penguin</b> — tag everyone, then <b>Check</b>. Fewer mistakes, more points — streaks multiply!</div></div>
+    </div>
+
+    <div class="badge-label">Badges</div>
+    <div class="badge-row" id="badgeRow"></div>
+
+    <div id="bestLine" class="best"></div>
+    <button class="icon-btn" id="soundBtnW" onclick="toggleSound()" title="Sound on/off" style="margin:0 auto">🔊</button>
+    <div class="foot">Waddle on! Puzzles inspired by Smullyan-style logic &amp; <a href="https://puzzlewocky.com/brain-teasers/knights-and-knaves/" target="_blank" rel="noopener">puzzlewocky.com</a></div>
+  </section>
+
+  <!-- GAME -->
+  <div id="game" class="hidden">
+    <div class="hud" id="hud"></div>
+    <div class="progress-dots" id="dots" style="margin:-6px 4px 14px"></div>
+    <section class="card" id="puzzleCard"></section>
+  </div>
+
+  <!-- QUEST END -->
+  <section id="end" class="card center hidden">
+    <div class="logo" id="endEmoji">🏆</div>
+    <h2 class="big-title grad" style="font-size:34px">Quest Complete!</h2>
+    <div class="rank" id="rankText"></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="k">Final Score</div><div class="v score-num" id="endScore">0</div></div>
+      <div class="stat-card"><div class="k">Total Time</div><div class="v" id="endTime">0s</div></div>
+      <div class="stat-card"><div class="k">Total Slips</div><div class="v" id="endMiss">0</div></div>
+      <div class="stat-card"><div class="k">Best Streak</div><div class="v" id="endStreak">0</div></div>
+    </div>
+    <div class="best" id="endBest"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="startQuest()">Play Again ↻</button>
+      <button class="btn btn-gold" onclick="startEndless()">Try Endless Floe ♾️</button>
+      <button class="btn btn-ghost" onclick="showWelcome()">Home</button>
+    </div>
+  </section>
+
+  <!-- ENDLESS END -->
+  <section id="endlessEnd" class="card center hidden">
+    <div class="logo" id="eeEmoji">💔</div>
+    <h2 class="big-title grad" style="font-size:34px">Slipped on the Ice!</h2>
+    <div class="rank" id="eeRank"></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="k">Score</div><div class="v score-num" id="eeScore">0</div></div>
+      <div class="stat-card"><div class="k">Rounds Cleared</div><div class="v" id="eeRounds">0</div></div>
+      <div class="stat-card"><div class="k">Best Streak</div><div class="v" id="eeStreak">0</div></div>
+    </div>
+    <div class="best" id="eeBest"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="startEndless()">Play Again ↻</button>
+      <button class="btn btn-ghost" onclick="showWelcome()">Home</button>
+    </div>
+  </section>
+
+</div>
+
+<div id="toast" class="toast"></div>
+<canvas id="cf"></canvas>
+
+<script>
+/* ============================================================
+   LOGIC CORE (pure — no DOM). Statements are predicates over a
+   role assignment; a brute-force solver confirms EXACTLY one
+   consistent assignment, so every puzzle is verifiable — both
+   the handcrafted quest and every generated Endless round.
+   ============================================================ */
+/*==LOGIC==*/
+const KK = ['knight','knave'];
+const KKS = ['knight','knave','spy'];
+
+const CHAR_POOL = [
+  {name:"Ruby", art:"🦊", cls:"a-ruby"},
+  {name:"Sky",  art:"🐰", cls:"a-sky"},
+  {name:"Fern", art:"🐢", cls:"a-fern"},
+  {name:"Pip",  art:"🦉", cls:"a-gold"},
+  {name:"Juno", art:"🐱", cls:"a-lilac"},
+  {name:"Moss", art:"🐸", cls:"a-moss"},
+];
+
+function solve(p){
+  const names = p.chars.map(c=>c.name);
+  const sols = [];
+  const total = Math.pow(p.roles.length, names.length);
+  for(let i=0;i<total;i++){
+    const a={}; let n=i;
+    for(const nm of names){ a[nm]=p.roles[n % p.roles.length]; n=Math.floor(n/p.roles.length); }
+    if(p.exactlyOne){
+      const counts={}; p.roles.forEach(r=>counts[r]=0);
+      names.forEach(nm=>counts[a[nm]]++);
+      if(p.roles.some(r=>counts[r]!==1)) continue;
+    }
+    let ok=true;
+    for(const c of p.chars){
+      if(!c.stmt) continue;
+      const r=a[c.name];
+      if(r==='spy') continue;                 // spy unconstrained
+      const truthful = (r==='knight');
+      if(c.stmt(a)!==truthful){ ok=false; break; }
+    }
+    if(ok) sols.push(a);
+  }
+  return sols;
+}
+
+/* ---------- statement templates for the Endless generator ---------- */
+function rnd(n){ return Math.floor(Math.random()*n); }
+function pickOne(arr){ return arr[rnd(arr.length)]; }
+function shuffled(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+const TEMPLATES = [
+  {min:2, spy:'any', fn:(me,others)=>{ const o=pickOne(others), r=pickOne(KK);
+    return {text:`“${o} is a <b>${r}</b>.”`, stmt:a=>a[o]===r}; }},
+  {min:2, spy:'any', fn:(me,others)=>{ const o=pickOne(others), same=Math.random()<.5;
+    return {text:`“${o} and I are <b>${same?'the same type':'different types'}</b>.”`,
+      stmt:a=> same ? a[me]===a[o] : a[me]!==a[o]}; }},
+  {min:3, spy:'any', fn:(me,others)=>{ const [o1,o2]=shuffled(others), same=Math.random()<.5;
+    return {text:`“${o1} and ${o2} are <b>${same?'the same type':'different types'}</b>.”`,
+      stmt:a=> same ? a[o1]===a[o2] : a[o1]!==a[o2]}; }},
+  {min:2, spy:false, fn:(me,others,names)=>(
+    {text:`“<b>At least one</b> of us is a knave.”`, stmt:a=>names.some(nm=>a[nm]==='knave')})},
+  {min:2, spy:false, fn:(me,others,names)=>{ const r=pickOne(KK);
+    return {text:`“We are <b>${names.length===2?'both':'all'} ${r}s</b>.”`,
+      stmt:a=>names.every(nm=>a[nm]===r)}; }},
+  {min:3, spy:false, fn:(me,others,names)=>{ const r=pickOne(KK);
+    return {text:`“<b>Exactly one</b> of us is a ${r}.”`,
+      stmt:a=>names.filter(nm=>a[nm]===r).length===1}; }},
+  {min:3, spy:true, fn:(me)=>{ const not=Math.random()<.5;
+    return {text:`“I am <b>${not?'not ':''}the spy</b>.”`, stmt:a=> not ? a[me]!=='spy' : a[me]==='spy'}; }},
+  {min:3, spy:true, fn:(me,others)=>{ const o=pickOne(others), not=Math.random()<.5;
+    return {text:`“${o} is <b>${not?'not ':''}the spy</b>.”`, stmt:a=> not ? a[o]!=='spy' : a[o]==='spy'}; }},
+  {min:3, spy:true, fn:(me)=>(
+    {text:`“I am a <b>knight</b>.”`, stmt:a=>a[me]==='knight'})},
+];
+
+const GEN_TITLES = ["Trouble at the Tidepools","Whispers on the Glacier","The Ferry Fare Fib",
+  "Mystery at the Minnow Market","Riddles by the Icy Reeds","The Lantern Floe Affair","Squabble at the Hot Spring",
+  "The Picnic Predicament","Gossip at the Igloo","The Sled Toll Tangle","Secrets in the Snowdrift",
+  "The Moonlit Meltwater","Bickering at the Bakery","The Seashell Swindle","Flurries of Fibs"];
+const GEN_SCENES = ["Two locals block the snowy path, grinning.","You waddle into islanders mid-argument.",
+  "The islanders eye the famous Puzzle Penguin expectantly.","Fresh faces at the frosty crossroads — and fresh claims.",
+  "They all squawk at once, then wait for your verdict.","A hush falls over the snow as you waddle up…"];
+
+function genPuzzle(n, spyMode){
+  const roles = spyMode ? KKS : KK;
+  if(spyMode) n = 3;
+  for(let t=0;t<600;t++){
+    const chars = shuffled(CHAR_POOL).slice(0,n).map(c=>({name:c.name, art:c.art, cls:c.cls}));
+    const names = chars.map(c=>c.name);
+    const silentIdx = (!spyMode && n===2 && Math.random()<.25) ? rnd(n) : -1;
+    chars.forEach((c,i)=>{
+      if(i===silentIdx){ c.text='… says nothing, just smiles.'; c.stmt=null; return; }
+      const pool = TEMPLATES.filter(tm=> n>=tm.min && (tm.spy==='any' || tm.spy===spyMode));
+      const s = pickOne(pool).fn(c.name, names.filter(nm=>nm!==c.name), names);
+      c.text=s.text; c.stmt=s.stmt;
+    });
+    const spoken = chars.filter(c=>c.stmt).map(c=>c.text);
+    if(new Set(spoken).size !== spoken.length) continue;   // no parroting
+    const p = {roles, exactlyOne:spyMode, chars,
+      title:pickOne(GEN_TITLES),
+      scene:pickOne(GEN_SCENES) + (spyMode ? ' Exactly one Knight, one Knave, and one Spy stand before you.' : '')};
+    const sols = solve(p);
+    if(sols.length!==1) continue;
+    p.solution = sols[0];
+    return p;
+  }
+  return null;
+}
+
+function endlessConfig(round){
+  if(round<=2) return {n:2, spy:false};
+  if(round<=5) return {n:3, spy:false};
+  return {n:3, spy: round%2===0};
+}
+
+/* ---------- handcrafted Story Quest (10 puzzles, 3 chapters) ---------- */
+const PUZZLES = [
+  { title:"The Honest Confession",
+    scene:"You meet two islanders. Only one of them speaks…",
+    roles:KK, exactlyOne:false,
+    chars:[
+      {name:"Ruby", art:"🦊", cls:"a-ruby", text:'“We are <b>both knaves</b>.”',
+        stmt:a=> a.Ruby==='knave' && a.Sky==='knave'},
+      {name:"Sky", art:"🐰", cls:"a-sky", text:'… stays quiet.', stmt:null},
+    ],
+    hint:"If Ruby were a knight, her claim would be true — but then she'd be a knave. That can't be. So what is Ruby, and what must that make her statement?"},
+  { title:"At Least One Liar",
+    scene:"Two islanders again. One makes a careful claim.",
+    roles:KK, exactlyOne:false,
+    chars:[
+      {name:"Ruby", art:"🦊", cls:"a-ruby", text:'“<b>At least one</b> of us is a knave.”',
+        stmt:a=> a.Ruby==='knave' || a.Sky==='knave'},
+      {name:"Sky", art:"🐰", cls:"a-sky", text:'… says nothing.', stmt:null},
+    ],
+    hint:"Could Ruby be a knave? Then her statement would actually be TRUE — a knave can't say something true. So Ruby is…?"},
+  { title:"Same or Different?",
+    scene:"Two islanders make opposite-sounding claims.",
+    roles:KK, exactlyOne:false,
+    chars:[
+      {name:"Ruby", art:"🦊", cls:"a-ruby", text:'“We are the <b>same</b> type.”',
+        stmt:a=> a.Ruby===a.Sky},
+      {name:"Sky", art:"🐰", cls:"a-sky", text:'“We are <b>different</b> types.”',
+        stmt:a=> a.Ruby!==a.Sky},
+    ],
+    hint:"Their claims directly contradict each other, so they can't both be telling the truth — and can't both be lying. One of each! Now, which claim is actually true?"},
+  { title:"A Cunning Twist",
+    scene:"Two islanders. Read carefully — appearances deceive.",
+    roles:KK, exactlyOne:false,
+    chars:[
+      {name:"Ruby", art:"🦊", cls:"a-ruby", text:'“Sky is a <b>knight</b>.”',
+        stmt:a=> a.Sky==='knight'},
+      {name:"Sky", art:"🐰", cls:"a-sky", text:'“Ruby and I are of <b>opposite</b> types.”',
+        stmt:a=> a.Ruby!==a.Sky},
+    ],
+    hint:"Test each possibility. If Sky's 'opposite types' claim were true, Sky would be a knight — but then Ruby (calling Sky a knight) would be truthful too, making them the SAME type. Contradiction! Follow the thread…"},
+  { title:"The Trio Speaks",
+    scene:"Three islanders, each pointing fingers.",
+    roles:KK, exactlyOne:false,
+    chars:[
+      {name:"Ruby", art:"🦊", cls:"a-ruby", text:'“Sky is a <b>knave</b>.”',
+        stmt:a=> a.Sky==='knave'},
+      {name:"Sky", art:"🐰", cls:"a-sky", text:'“Ruby and Fern are the <b>same</b> type.”',
+        stmt:a=> a.Ruby===a.Fern},
+      {name:"Fern", art:"🐢", cls:"a-fern", text:'“Sky is a <b>knight</b>.”',
+        stmt:a=> a.Sky==='knight'},
+    ],
+    hint:"Start by ASSUMING Ruby is a knight. Then Sky is a knave, so Sky's claim is false → Ruby and Fern are NOT the same type → Fern is a knave. Does Fern's statement hold up? It does — and the other case collapses."},
+  { title:"Crossed Accusations",
+    scene:"Three islanders in a tangle of claims.",
+    roles:KK, exactlyOne:false,
+    chars:[
+      {name:"Ruby", art:"🦊", cls:"a-ruby", text:'“Fern is a <b>knave</b>.”',
+        stmt:a=> a.Fern==='knave'},
+      {name:"Sky", art:"🐰", cls:"a-sky", text:'“Ruby is a <b>knight</b>.”',
+        stmt:a=> a.Ruby==='knight'},
+      {name:"Fern", art:"🐢", cls:"a-fern", text:'“Sky and I are <b>different</b> types.”',
+        stmt:a=> a.Sky!==a.Fern},
+    ],
+    hint:"Suppose Ruby is a knight. Then Sky (who calls Ruby a knight) is also a knight, and Fern is a knave. But Fern's 'we're different' claim would then be TRUE — impossible for a knave. So Ruby must be lying…"},
+  { title:"The Lone Knight",
+    scene:"Deep in the shivering pines, three islanders trade sly glances.",
+    roles:KK, exactlyOne:false,
+    chars:[
+      {name:"Ruby", art:"🦊", cls:"a-ruby", text:'“<b>Exactly one</b> of us is a knight.”',
+        stmt:a=> [a.Ruby,a.Pip,a.Juno].filter(r=>r==='knight').length===1},
+      {name:"Pip", art:"🦉", cls:"a-gold", text:'“Ruby is a <b>knave</b>.”',
+        stmt:a=> a.Ruby==='knave'},
+      {name:"Juno", art:"🐱", cls:"a-lilac", text:'“We are <b>all knaves</b>.”',
+        stmt:a=> a.Ruby==='knave' && a.Pip==='knave' && a.Juno==='knave'},
+    ],
+    hint:"Juno's 'we are all knaves' can never come from a knight — and if a knave says it, it must be false, so someone IS a knight. Combine that with Ruby's count…"},
+  { title:"The Spy Among Them",
+    scene:"Three islanders — exactly one Knight, one Knave, and one Spy. The Spy may tell the truth OR lie.",
+    roles:KKS, exactlyOne:true,
+    chars:[
+      {name:"Ruby", art:"🦊", cls:"a-ruby", text:'“I am a <b>knight</b>.”',
+        stmt:a=> a.Ruby==='knight'},
+      {name:"Sky", art:"🐰", cls:"a-sky", text:'“Ruby is telling the <b>truth</b>.”',
+        stmt:a=> a.Ruby==='knight'},
+      {name:"Fern", art:"🐢", cls:"a-fern", text:'“I am the <b>spy</b>.”',
+        stmt:a=> a.Fern==='spy'},
+    ],
+    hint:"A knight could never falsely say 'I am the spy', so Fern isn't the knight. Work out who can consistently back up Ruby — the Spy is free to agree, but the Knave is not. Exactly one arrangement survives."},
+  { title:"Feathers & Whiskers",
+    scene:"At the edge of Spy's Floe — exactly one Knight, one Knave, and one Spy.",
+    roles:KKS, exactlyOne:true,
+    chars:[
+      {name:"Pip", art:"🦉", cls:"a-gold", text:'“I am <b>not the spy</b>.”',
+        stmt:a=> a.Pip!=='spy'},
+      {name:"Juno", art:"🐱", cls:"a-lilac", text:'“Pip is the <b>knave</b>.”',
+        stmt:a=> a.Pip==='knave'},
+      {name:"Moss", art:"🐸", cls:"a-moss", text:'“Juno is the <b>spy</b>.”',
+        stmt:a=> a.Juno==='spy'},
+    ],
+    hint:"Could the knave say 'I am not the spy'? Only if it were false — which would make him the spy, not the knave. Contradiction! So start with what Pip CAN'T be…"},
+  { title:"The Impossible Confession",
+    scene:"The floe's deepest ice cave. Exactly one Knight, one Knave, and one Spy — and one of them says something no honest soul ever could…",
+    roles:KKS, exactlyOne:true,
+    chars:[
+      {name:"Sky", art:"🐰", cls:"a-sky", text:'“Moss is the <b>knave</b>.”',
+        stmt:a=> a.Moss==='knave'},
+      {name:"Fern", art:"🐢", cls:"a-fern", text:'“I am the <b>knave</b>.”',
+        stmt:a=> a.Fern==='knave'},
+      {name:"Moss", art:"🐸", cls:"a-moss", text:'“Sky is the <b>spy</b>.”',
+        stmt:a=> a.Sky==='spy'},
+    ],
+    hint:"Nobody honest can say 'I am the knave' — a knight would be lying, and a knave would be telling the truth! Only one type gets away with it. Once you've placed Fern, the rest falls like dominoes."},
+];
+
+const CHAPTERS = [
+  {from:0, to:2, name:"Ch. 1 · Snowdrop Shore"},
+  {from:3, to:6, name:"Ch. 2 · Shivering Pines"},
+  {from:7, to:9, name:"Ch. 3 · Spy's Floe"},
+];
+/*==ENDLOGIC==*/
+
+// Verify uniqueness up front (logs to console for testing)
+PUZZLES.forEach((p,i)=>{
+  const s=solve(p);
+  if(s.length!==1) console.error(`⚠ Puzzle ${i+1} "${p.title}" has ${s.length} solutions`, s);
+  else p.solution=s[0];
+});
+
+/* ============================================================
+   SOUND — tiny WebAudio synth, no assets
+   ============================================================ */
+let audioCtx=null, muted=false;
+try{ muted = localStorage.getItem('kk_mute')==='1'; }catch(e){}
+function ac(){
+  if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null; audioCtx=new AC(); }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, when, dur, type, vol, slideTo){
+  const c=ac(); if(!c) return;
+  const o=c.createOscillator(), g=c.createGain();
+  o.type=type||'sine'; o.frequency.setValueAtTime(freq, c.currentTime+when);
+  if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, c.currentTime+when+dur);
+  g.gain.setValueAtTime(0, c.currentTime+when);
+  g.gain.linearRampToValueAtTime(vol||.12, c.currentTime+when+.012);
+  g.gain.exponentialRampToValueAtTime(.0001, c.currentTime+when+dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(c.currentTime+when); o.stop(c.currentTime+when+dur+.05);
+}
+function sfx(name){
+  if(muted) return;
+  switch(name){
+    case 'pick':    tone(660,0,.08,'sine',.09); break;
+    case 'correct': [523,659,784].forEach((f,i)=>tone(f,i*.09,.22,'triangle',.13)); break;
+    case 'perfect': [523,659,784,1046].forEach((f,i)=>tone(f,i*.08,.3,'triangle',.14)); tone(1568,.36,.4,'sine',.08); break;
+    case 'wrong':   tone(220,0,.22,'sawtooth',.08,140); break;
+    case 'hint':    tone(1200,0,.12,'sine',.09); tone(1600,.1,.16,'sine',.08); break;
+    case 'heart':   tone(330,0,.18,'square',.06,220); tone(196,.16,.3,'square',.06,130); break;
+    case 'fanfare': [392,523,659,784,1046].forEach((f,i)=>tone(f,i*.11,.32,'triangle',.13)); tone(1318,.55,.55,'sine',.09); break;
+    case 'badge':   [880,1108,1318].forEach((f,i)=>tone(f,i*.07,.2,'sine',.1)); break;
+    case 'gameover':[392,330,262,196].forEach((f,i)=>tone(f,i*.16,.3,'triangle',.1)); break;
+  }
+}
+function toggleSound(){
+  muted=!muted;
+  try{ localStorage.setItem('kk_mute', muted?'1':'0'); }catch(e){}
+  syncSoundBtns();
+  if(!muted) sfx('pick');
+}
+function syncSoundBtns(){
+  ['soundBtnW','soundBtnH'].forEach(id=>{ const b=$(id); if(b) b.textContent = muted?'🔇':'🔊'; });
+}
+
+/* ============================================================
+   BADGES
+   ============================================================ */
+const BADGES=[
+  {id:'quest',    icon:'📖', name:'Storybook Hero',  desc:'Finish the Story Quest'},
+  {id:'flawless', icon:'💎', name:'Flawless',        desc:'Finish the quest with zero slips'},
+  {id:'purist',   icon:'🧠', name:'Purist',          desc:'Finish the quest without hints'},
+  {id:'speedy',   icon:'⚡', name:'Lightning Logic', desc:'First-try solve in under 8 seconds'},
+  {id:'streak5',  icon:'🔥', name:'On Fire',         desc:'Reach a 5-streak in Endless'},
+  {id:'streak10', icon:'🌋', name:'Unstoppable',     desc:'Reach a 10-streak in Endless'},
+  {id:'round10',  icon:'🧊', name:'Iceberg Legend',  desc:'Clear 10 rounds on the Endless Floe'},
+  {id:'grand',    icon:'👑', name:'Emperor Penguin', desc:'Score 8,000+ in the Story Quest'},
+];
+function getBadges(){ try{ return JSON.parse(localStorage.getItem('kk_badges')||'[]'); }catch(e){ return []; } }
+function award(id){
+  const have=getBadges();
+  if(have.includes(id)) return;
+  have.push(id);
+  try{ localStorage.setItem('kk_badges', JSON.stringify(have)); }catch(e){}
+  const b=BADGES.find(x=>x.id===id);
+  setTimeout(()=>{ showToast(`🏅 Badge earned: ${b.name}!`, true); sfx('badge'); }, 900);
+}
+function renderBadges(){
+  const have=getBadges();
+  $('badgeRow').innerHTML = BADGES.map(b=>
+    `<div class="badge ${have.includes(b.id)?'':'off'}" title="${b.name} — ${b.desc}">${b.icon}</div>`).join('');
+}
+
+/* ============================================================
+   GAME STATE + UI
+   ============================================================ */
+const ROLE_META={
+  knight:{icon:"🛡️", label:"Knight"},
+  knave:{icon:"🎭", label:"Knave"},
+  spy:{icon:"🕵️", label:"Spy"},
+};
+const BASE=1000, PEN_MISS=150, PEN_HINT=200, PEN_PER_SEC=3, PEN_TIME_CAP=250, MIN_SCORE=100;
+
+let state=null, timer=null;
+function $(id){ return document.getElementById(id); }
+function lsGetInt(k){ try{ return parseInt(localStorage.getItem(k)||'0',10)||0; }catch(e){ return 0; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,String(v)); }catch(e){} }
+
+function baseState(mode){
+  return { mode, idx:0, round:1, score:0, totalMiss:0, totalMs:0, hearts:3,
+    streak:0, bestStreak:0, usedAnyHint:false, picks:{}, puzzleMiss:0, hintUsed:false,
+    startedAt:0, solved:false, over:false, current:null };
+}
+
+function startQuest(){
+  state=baseState('quest');
+  showGame(); buildHud(); buildDots(); loadPuzzle();
+  palSay('start');
+}
+function startEndless(){
+  state=baseState('endless');
+  showGame(); buildHud(); $('dots').innerHTML=''; loadPuzzle();
+  palSay('start');
+}
+function showGame(){
+  ['welcome','end','endlessEnd'].forEach(id=>$(id).classList.add('hidden'));
+  $('game').classList.remove('hidden');
+}
+function showWelcome(){
+  clearInterval(timer);
+  ['game','end','endlessEnd'].forEach(id=>$(id).classList.add('hidden'));
+  $('welcome').classList.remove('hidden');
+  refreshBest(); renderBadges(); syncSoundBtns();
+}
+
+function buildHud(){
+  const quest = state.mode==='quest';
+  $('hud').innerHTML=`
+    <div class="stat">
+      <span class="k">${quest?'Puzzle':'Round'}</span>
+      <span class="v" id="hudLeft">${quest?`1/${PUZZLES.length}`:'1'}</span>
+    </div>
+    ${quest
+      ? `<div class="stat"><span class="k">Slips</span><span class="v" id="hudMiss">0</span></div>`
+      : `<div class="stat"><span class="k">Hearts</span><span class="v hearts" id="hudHearts"></span></div>`}
+    <div class="streak-chip" id="streakChip">🔥 <span id="streakN">0</span></div>
+    <div class="spacer"></div>
+    <div class="stat" style="text-align:right"><span class="k">Score</span><span class="v score-num" id="hudScore">0</span></div>
+    <button class="icon-btn" id="soundBtnH" onclick="toggleSound()" title="Sound on/off">🔊</button>
+    <button class="icon-btn" onclick="showWelcome()" title="Back home">🏠</button>`;
+  syncSoundBtns();
+  if(!quest) renderHearts();
+}
+function renderHearts(){
+  const h=$('hudHearts'); if(!h) return;
+  h.innerHTML = [0,1,2].map(i=> i<state.hearts ? '❤️' : '<span class="lost">🖤</span>').join('');
+}
+function renderStreak(){
+  const chip=$('streakChip'); if(!chip) return;
+  $('streakN').textContent=state.streak;
+  chip.classList.toggle('show', state.streak>=2);
+  chip.classList.toggle('hot', state.streak>=4);
+}
+
+function buildDots(){
+  const d=$('dots'); d.innerHTML='';
+  PUZZLES.forEach(()=>{const s=document.createElement('div');s.className='dot';d.appendChild(s);});
+}
+function updateDots(){
+  if(state.mode!=='quest') return;
+  [...$('dots').children].forEach((el,i)=>{
+    el.className='dot'+(i<state.idx?' done':i===state.idx?' cur':'');
+  });
+}
+
+function loadPuzzle(){
+  clearInterval(timer);
+  let p;
+  if(state.mode==='quest'){
+    p=PUZZLES[state.idx];
+  } else {
+    const cfg=endlessConfig(state.round);
+    p=genPuzzle(cfg.n, cfg.spy) || genPuzzle(2,false);
+  }
+  state.current=p;
+  state.picks={}; state.puzzleMiss=0; state.hintUsed=false; state.solved=false;
+  state.startedAt=Date.now();
+  updateDots(); renderStreak();
+  $('hudScore').textContent=state.score;
+  if(state.mode==='quest'){
+    $('hudLeft').textContent=`${state.idx+1}/${PUZZLES.length}`;
+    $('hudMiss').textContent=state.totalMiss;
+  } else {
+    $('hudLeft').textContent=state.round;
+    renderHearts();
+  }
+
+  const quest=state.mode==='quest';
+  const spyRound=p.roles.includes('spy');
+  const eyebrow = quest
+    ? `${CHAPTERS.find(c=>state.idx>=c.from&&state.idx<=c.to).name} · Puzzle ${state.idx+1} of ${PUZZLES.length}${spyRound?' · Spy Round':''}`
+    : `Round ${state.round}${spyRound?' · 🕵️ Spy Round':' · Classic'}`;
+
+  const charsHtml=p.chars.map((c,i)=>`
+    <div class="char" id="char-${c.name}" data-name="${c.name}" style="animation-delay:${i*90}ms">
+      <div class="avatar ${c.cls}">${c.art}</div>
+      <div class="body">
+        <div class="name">${c.name} <span class="verdict" id="vd-${c.name}"></span></div>
+        <div class="bubble" style="animation-delay:${180+i*140}ms">${c.text}</div>
+        <div class="roles">
+          ${p.roles.map(r=>`
+            <button class="role ${r}" data-name="${c.name}" data-role="${r}" onclick="pick('${c.name}','${r}')">
+              ${ROLE_META[r].icon} ${ROLE_META[r].label}
+            </button>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+
+  const hintLabel = quest ? `💡 Hint (−${PEN_HINT})` : `🔎 Reveal one (−100)`;
+  $('puzzleCard').innerHTML=`
+    ${quest?'<div class="timebar"><div class="timebar-fill" id="tbFill"></div></div>':''}
+    <div class="eyebrow">${eyebrow}</div>
+    <h2 class="ptitle">${p.title}</h2>
+    <p class="scene">${p.scene}</p>
+    <div class="chars">${charsHtml}</div>
+    <div class="hint-box" id="hintBox"></div>
+    <div class="explain" id="explainBox"></div>
+    <div class="actions">
+      <button class="btn btn-primary" id="checkBtn" onclick="check()" disabled>Check Answer ✓</button>
+      <button class="btn btn-gold" id="hintBtn" onclick="useHint()">${hintLabel}</button>
+      <span class="feedback" id="feedback"></span>
+    </div>`;
+
+  const card=$('puzzleCard');
+  card.classList.remove('card-enter'); void card.offsetWidth; card.classList.add('card-enter');
+
+  if(quest){
+    timer=setInterval(()=>{
+      const fill=$('tbFill'); if(!fill) return;
+      const pen=Math.min(PEN_TIME_CAP,(Date.now()-state.startedAt)/1000*PEN_PER_SEC);
+      const left=1-pen/PEN_TIME_CAP;
+      fill.style.width=(left*100)+'%';
+      fill.className='timebar-fill'+(left<.25?' low':left<.6?' mid':'');
+    },400);
+  }
+}
+
+function allPicked(){
+  return state.current.chars.every(c=>state.picks[c.name]);
+}
+
+function pick(name,role){
+  if(!state || state.solved || state.over) return;
+  const ch=$('char-'+name);
+  if(ch.classList.contains('locked')) return;
+  sfx('pick');
+  state.picks[name]=role;
+  document.querySelectorAll(`.role[data-name="${name}"]`).forEach(b=>{
+    b.classList.toggle('sel', b.dataset.role===role);
+  });
+  ch.classList.remove('ok','no');
+  $('vd-'+name).textContent='';
+  $('feedback').textContent='';
+  $('checkBtn').disabled=!allPicked();
+}
+
+function useHint(){
+  if(!state || state.solved || state.over || state.hintUsed) return;
+  const p=state.current;
+  state.hintUsed=true; state.usedAnyHint=true;
+  state.streak=0; renderStreak();
+  sfx('hint'); palSay('hint');
+  $('hintBtn').disabled=true; $('hintBtn').style.opacity=.5;
+  if(state.mode==='quest'){
+    const hb=$('hintBox'); hb.innerHTML='💡 '+p.hint; hb.classList.add('show');
+  } else {
+    // reveal one character whose current pick is missing or wrong
+    const targets=p.chars.filter(c=>state.picks[c.name]!==p.solution[c.name]);
+    const c = targets.length ? targets[rnd(targets.length)] : p.chars[rnd(p.chars.length)];
+    state.score=Math.max(0,state.score-100);
+    $('hudScore').textContent=state.score;
+    state.picks[c.name]=p.solution[c.name];
+    document.querySelectorAll(`.role[data-name="${c.name}"]`).forEach(b=>{
+      b.classList.toggle('sel', b.dataset.role===p.solution[c.name]);
+      b.disabled=true;
+    });
+    $('char-'+c.name).classList.add('locked');
+    $('vd-'+c.name).textContent='🔎';
+    const hb=$('hintBox');
+    hb.innerHTML=`🔎 A little bird whispers: <b>${c.name}</b> is the <b>${ROLE_META[p.solution[c.name]].label}</b>.`;
+    hb.classList.add('show');
+    $('checkBtn').disabled=!allPicked();
+  }
+}
+
+function explainHtml(p){
+  return `<h4>🔍 Why it works</h4>`+p.chars.map(c=>{
+    const r=p.solution[c.name], m=ROLE_META[r];
+    let line;
+    if(r==='spy') line=`is the <b>Spy</b> 🕵️ — spies may say anything, true or false.`;
+    else if(!c.stmt) line=`is a <b>${m.label}</b> ${m.icon} — they stayed silent, and silence never lies.`;
+    else{
+      const tv=c.stmt(p.solution);
+      line=`is a <b>${m.label}</b> ${m.icon} — the claim is <b>${tv?'true':'false'}</b>, exactly what a ${m.label.toLowerCase()} would say.`;
+    }
+    return `<div class="xline"><b>${c.name}</b> ${line}</div>`;
+  }).join('');
+}
+
+function markAll(p, revealCorrect){
+  p.chars.forEach(c=>{
+    const right = revealCorrect || state.picks[c.name]===p.solution[c.name];
+    if(revealCorrect){
+      state.picks[c.name]=p.solution[c.name];
+      document.querySelectorAll(`.role[data-name="${c.name}"]`).forEach(b=>{
+        b.classList.toggle('sel', b.dataset.role===p.solution[c.name]);
+        b.disabled=true;
+      });
+    }
+    const ch=$('char-'+c.name);
+    ch.classList.toggle('ok',right);
+    ch.classList.toggle('no',!right);
+    $('vd-'+c.name).textContent = right?'✅':'❌';
+  });
+}
+
+function check(){
+  if(!state || state.solved || state.over) return;
+  const p=state.current;
+  const allRight=p.chars.every(c=>state.picks[c.name]===p.solution[c.name]);
+  markAll(p,false);
+
+  if(allRight){
+    state.solved=true;
+    clearInterval(timer);
+    const elapsedMs=Date.now()-state.startedAt;
+    state.totalMs+=elapsedMs;
+    const firstTry = state.puzzleMiss===0 && !state.hintUsed;
+    if(firstTry){ state.streak++; state.bestStreak=Math.max(state.bestStreak,state.streak); }
+    renderStreak();
+    if(elapsedMs<8000 && firstTry) award('speedy');
+
+    let earned;
+    if(state.mode==='quest'){
+      const timePen=Math.min(PEN_TIME_CAP,(elapsedMs/1000)*PEN_PER_SEC);
+      earned=Math.max(MIN_SCORE, Math.round(BASE - state.puzzleMiss*PEN_MISS - (state.hintUsed?PEN_HINT:0) - timePen));
+      if(firstTry && state.streak>=2) earned += Math.min(4,state.streak-1)*75;
+    } else {
+      const base=200+25*Math.min(state.round,8);
+      earned=Math.round(base*(1+.2*Math.min(state.streak,10)));
+      if(state.streak>=5) award('streak5');
+      if(state.streak>=10) award('streak10');
+    }
+    state.score+=earned;
+    $('hudScore').textContent=state.score;
+
+    const fb=$('feedback'); fb.className='feedback good';
+    fb.textContent = firstTry ? `Perfect! +${earned}` : `Solved! +${earned}`;
+    sfx(firstTry?'perfect':'correct');
+    palSay('solve');
+    confettiBurst(firstTry);
+    showToast(firstTry && state.streak>=2 ? `🔥 ${state.streak} streak! +${earned}` : `✨ +${earned} points!`);
+
+    const xb=$('explainBox'); xb.innerHTML=explainHtml(p); xb.classList.add('show');
+
+    const cb=$('checkBtn');
+    cb.className='btn btn-good'; cb.disabled=false;
+    cb.textContent = state.mode==='quest'
+      ? (state.idx<PUZZLES.length-1?'Next Puzzle →':'See Results 🏆')
+      : 'Next Round →';
+    cb.onclick=nextPuzzle;
+    $('hintBtn').disabled=true; $('hintBtn').style.opacity=.5;
+
+  } else {
+    state.puzzleMiss++; state.totalMiss++;
+    state.streak=0; renderStreak();
+    sfx('wrong');
+    const fb=$('feedback'); fb.className='feedback bad';
+
+    if(state.mode==='quest'){
+      $('hudMiss').textContent=state.totalMiss;
+      fb.textContent='Not quite — adjust & retry!';
+      palSay('wrong');
+    } else {
+      state.hearts--; renderHearts(); sfx('heart');
+      if(state.hearts<=0){
+        state.over=true;
+        fb.textContent='Out of hearts!';
+        markAll(p,true);
+        const xb=$('explainBox'); xb.innerHTML=explainHtml(p); xb.classList.add('show');
+        const cb=$('checkBtn');
+        cb.className='btn btn-primary'; cb.disabled=false; cb.textContent='See Results 💔';
+        cb.onclick=endlessGameOver;
+        $('hintBtn').disabled=true; $('hintBtn').style.opacity=.5;
+        sfx('gameover'); palSay('gameover');
+      } else {
+        fb.textContent=`💔 ${state.hearts} heart${state.hearts>1?'s':''} left — adjust & retry!`;
+        palSay('wrong');
+      }
+    }
+  }
+}
+
+function nextPuzzle(){
+  if(state.mode==='quest'){
+    if(state.idx<PUZZLES.length-1){ state.idx++; loadPuzzle(); }
+    else finishQuest();
+  } else {
+    state.round++;
+    if(state.round>1 && (state.round-1)%5===0 && state.hearts<3){
+      state.hearts++; showToast('❤️ Heart restored!');
+    }
+    if(state.round>10) award('round10');
+    loadPuzzle();
+  }
+}
+
+function finishQuest(){
+  clearInterval(timer);
+  state.idx=PUZZLES.length; updateDots();
+  $('game').classList.add('hidden');
+  $('end').classList.remove('hidden');
+  const secs=Math.round(state.totalMs/1000);
+  $('endScore').textContent=state.score;
+  $('endTime').textContent= secs>=60? `${Math.floor(secs/60)}m ${secs%60}s` : `${secs}s`;
+  $('endMiss').textContent=state.totalMiss;
+  $('endStreak').textContent=state.bestStreak;
+
+  const pct=state.score/(BASE*PUZZLES.length);
+  let rank,emoji;
+  if(state.totalMiss===0 && pct>0.9){rank="Emperor Penguin of Logic";emoji="👑";}
+  else if(pct>0.8){rank="King Penguin Detective";emoji="🏆";}
+  else if(pct>0.6){rank="Snappy-Flippered Sleuth";emoji="🔎";}
+  else if(pct>0.4){rank="Clever Chick";emoji="🌟";}
+  else {rank="Fluffy Hatchling";emoji="🐣";}
+  $('rankText').textContent=`${emoji} ${rank}`;
+  $('endEmoji').textContent=emoji;
+
+  award('quest');
+  if(state.totalMiss===0) award('flawless');
+  if(!state.usedAnyHint) award('purist');
+  if(state.score>=8000) award('grand');
+
+  const best=lsGetInt('kk_best');
+  if(state.score>best){
+    lsSet('kk_best',state.score);
+    $('endBest').textContent=`🎉 New best score: ${state.score}!`;
+  } else {
+    $('endBest').textContent=`Your best score: ${best}`;
+  }
+  sfx('fanfare'); palSay('win');
+  confettiBurst(true);
+}
+
+function endlessGameOver(){
+  clearInterval(timer);
+  $('game').classList.add('hidden');
+  $('endlessEnd').classList.remove('hidden');
+  const rounds=state.round-1;
+  $('eeScore').textContent=state.score;
+  $('eeRounds').textContent=rounds;
+  $('eeStreak').textContent=state.bestStreak;
+  let rank,emoji;
+  if(rounds>=15){rank="Emperor of the Floe";emoji="👑";}
+  else if(rounds>=10){rank="Iceberg Legend";emoji="🧊";}
+  else if(rounds>=6){rank="Seasoned Waddler";emoji="⛵";}
+  else if(rounds>=3){rank="Curious Chick";emoji="🧭";}
+  else {rank="Fresh Off the Iceberg";emoji="🐣";}
+  $('eeRank').textContent=`${emoji} ${rank}`;
+  $('eeEmoji').textContent = rounds>=10 ? '🏆' : '💔';
+
+  const bestS=lsGetInt('kk_best_endless'), bestR=lsGetInt('kk_best_round');
+  const lines=[];
+  if(state.score>bestS){ lsSet('kk_best_endless',state.score); lines.push(`🎉 New best endless score: ${state.score}!`); }
+  else if(bestS>0) lines.push(`Best endless score: ${bestS}`);
+  if(rounds>bestR){ lsSet('kk_best_round',rounds); lines.push(`🎉 Deepest run yet: ${rounds} rounds!`); }
+  else if(bestR>0) lines.push(`Deepest run: ${bestR} rounds`);
+  $('eeBest').innerHTML=lines.join(' &nbsp;·&nbsp; ');
+  if(rounds>=10) confettiBurst(true);
+}
+
+function refreshBest(){
+  const best=lsGetInt('kk_best'), bestE=lsGetInt('kk_best_endless'), bestR=lsGetInt('kk_best_round');
+  const parts=[];
+  if(best>0) parts.push(`📖 Best quest: ${best}`);
+  if(bestE>0) parts.push(`♾️ Best endless: ${bestE} (${bestR} rounds)`);
+  $('bestLine').textContent=parts.join('  ·  ');
+}
+
+/* ---------- penguin pal ---------- */
+const PAL_MSGS={
+  start:["Waddle we got here? 🧊","Flippers ready — let's puzzle!","Time to puzzle, penguin-style!"],
+  solve:["Waddle-tastic! 🎉","Ice work!","Cool as can be! 🧊","Un-brrr-lievable!","Smooth sliding!"],
+  wrong:["Brrr… not quite!","Slippery one, huh?","Shake it off — waddle on!","Even penguins slip sometimes."],
+  hint:["A little birdie told me… wait, that's me!","Psst — happy to help a fellow bird."],
+  gameover:["Even emperors slip on the ice.","The floe wins this round…"],
+  win:["Emperor-level puzzling! 👑","The isle bows to the Puzzle Penguin!"],
+};
+let palTimer=null;
+function palSay(kind){
+  const bubble=$('palBubble'); if(!bubble) return;
+  bubble.textContent=pickOne(PAL_MSGS[kind]);
+  bubble.classList.add('show');
+  clearTimeout(palTimer);
+  palTimer=setTimeout(()=>bubble.classList.remove('show'),2600);
+  if(kind==='solve'||kind==='win'){
+    const bird=$('palBird');
+    bird.classList.remove('hop'); void bird.offsetWidth; bird.classList.add('hop');
+  }
+}
+
+/* ---------- toast ---------- */
+let toastTimer=null;
+function showToast(msg, gold){
+  const t=$('toast'); t.textContent=msg;
+  t.className='toast show'+(gold?' gold':'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),1900);
+}
+
+/* ---------- confetti ---------- */
+const cf=$('cf'), ctx=cf.getContext('2d');
+let parts=[], raf=null;
+function sizeCf(){ cf.width=innerWidth; cf.height=innerHeight; }
+addEventListener('resize',sizeCf); sizeCf();
+function confettiBurst(big){
+  const cols=['#5ab6ff','#bfe3ff','#ffffff','#7adcc7','#b69bff','#ff9ecb','#ffce4a'];
+  const N=big?170:85;
+  for(let i=0;i<N;i++){
+    const kind=Math.random();
+    parts.push({
+      x:innerWidth/2+(Math.random()-.5)*140,
+      y:big?innerHeight/3:130,
+      vx:(Math.random()-.5)*11,
+      vy:Math.random()*-11-4,
+      g:.3+Math.random()*.15,
+      s:6+Math.random()*7,
+      rot:Math.random()*6.28, vr:(Math.random()-.5)*.4,
+      c:cols[(Math.random()*cols.length)|0],
+      shape: kind<.5?'rect':kind<.75?'circle':kind<.92?'streamer':'star',
+      life:90+Math.random()*45
+    });
+  }
+  if(!raf) raf=requestAnimationFrame(drawCf);
+}
+function drawStar(s){
+  ctx.beginPath();
+  for(let i=0;i<10;i++){
+    const r=i%2? s*.4 : s, a=Math.PI/5*i - Math.PI/2;
+    ctx[i?'lineTo':'moveTo'](Math.cos(a)*r, Math.sin(a)*r);
+  }
+  ctx.closePath(); ctx.fill();
+}
+function drawCf(){
+  ctx.clearRect(0,0,cf.width,cf.height);
+  parts.forEach(p=>{
+    p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life--;
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+    ctx.fillStyle=p.c;
+    if(p.shape==='rect') ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);
+    else if(p.shape==='circle'){ ctx.beginPath(); ctx.arc(0,0,p.s*.4,0,6.29); ctx.fill(); }
+    else if(p.shape==='streamer') ctx.fillRect(-p.s*.15,-p.s,p.s*.3,p.s*2);
+    else drawStar(p.s*.7);
+    ctx.restore();
+  });
+  parts=parts.filter(p=>p.life>0 && p.y<cf.height+40);
+  if(parts.length) raf=requestAnimationFrame(drawCf);
+  else { raf=null; ctx.clearRect(0,0,cf.width,cf.height); }
+}
+
+/* ---------- boot ---------- */
+refreshBest();
+renderBadges();
+syncSoundBtns();
+</script>
+</body>
+</html>
