@@ -1,1 +1,1 @@
-# knights-and-knaves
+# puzzle-penguin
